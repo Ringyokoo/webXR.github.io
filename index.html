@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AR Hat Try-On Demo</title>
+  <link rel="icon" href="data:,"> <!-- Устраняет ошибку favicon -->
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { width: 100%; height: 100%; display: block; }
@@ -35,17 +45,20 @@
   <video id="video" playsinline></video>
   <button id="arButton">Enter AR</button>
 
-  <!-- Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r169/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.169.0/examples/jsm/loaders/GLTFLoader.js"></script>
-  <script src="https://unpkg.com/three@0.169.0/examples/jsm/controls/OrbitControls.js"></script>
-  <script src="https://unpkg.com/three@0.169.0/examples/jsm/webxr/XRButton.js"></script>
-
-  <!-- MediaPipe Holistic -->
+  <!-- MediaPipe Holistic (не модули, подключаются как обычно) -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/holistic.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466004/camera_utils.js"></script>
 
-  <script>
+  
+
+  <!-- Основной скрипт как модуль -->
+  <script type="module">
+    // Импорт Three.js и дополнений с использованием importmap
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { XRButton } from 'three/addons/webxr/XRButton.js';
+
     // Инициализация Three.js
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -65,9 +78,9 @@
 
     // Загрузка модели шляпы
     let hatModel;
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader();
     loader.load(
-      'Props_HiHat.gltf', // Замените на URL вашей модели шляпы
+      '"./hat-glb/source/HAT_GLB.glb"', // Замените на URL вашей модели шляпы
       (gltf) => {
         hatModel = gltf.scene;
         hatModel.scale.set(0.5, 0.5, 0.5);
