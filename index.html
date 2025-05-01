@@ -80,7 +80,7 @@
     let hatModel;
     const loader = new GLTFLoader();
     loader.load(
-      '"/hat-glb/source/HAT_GLB.glb"', // Замените на URL вашей модели шляпы
+      '"hat-glb/source/HAT_GLB.glb"', // Замените на URL вашей модели шляпы
       (gltf) => {
         hatModel = gltf.scene;
         hatModel.scale.set(0.5, 0.5, 0.5);
