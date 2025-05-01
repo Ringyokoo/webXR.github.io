@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
   <meta charset="UTF-8" />
@@ -44,6 +44,11 @@
       z-index: 0;
     }
 
+    #video {
+      transform: scaleX(-1);
+    }
+
+
     #togglePoints {
       position: absolute;
       bottom: 10px;
@@ -82,7 +87,10 @@
 
     // Сцена и камера
     const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(0, videoWidth, 0, videoHeight, -1000, 1000);
+    // scene.scale.x = -1;
+
+    const camera = new THREE.OrthographicCamera(videoWidth, 0, 0, videoHeight, -1000, 1000);
+
     camera.position.z = 1;
 
     const renderer = new THREE.WebGLRenderer({ alpha: true });
@@ -101,7 +109,7 @@
       facePoints.push(point);
     }
 
-    // Удалить старое освещение, заменить этим:
+    // освещение
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // мягкий белый свет
     scene.add(ambientLight);
 
@@ -109,7 +117,6 @@
     directionalLight.position.set(0, 1, 2); // немного спереди и сверху
     scene.add(directionalLight);
 
-    // Дополнительный свет сзади для объема
     const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
     backLight.position.set(0, -1, -1);
     scene.add(backLight);
@@ -201,13 +208,13 @@
 
           // Масштаб по расстоянию между висками
           const distX = right.x - left.x;
-          const distY = right.y - left.y;
-          const distZ = right.z - left.z;
+          // const distY = right.y - left.y;
+          // const distZ = right.z - left.z;
 
-          const distance = Math.sqrt(distX ** 2 + distY ** 2 + distZ ** 2);
-          const scaleFactor = distance * 120;
-
-          hat.scale.setScalar(scaleFactor);
+          // const distance = Math.sqrt(distX ** 2 + distY ** 2 + distZ ** 2);
+          // const scaleFactor = 100;
+          // console.log(videoWidth/videoHeight)
+          hat.scale.setScalar(distX * videoWidth / videoHeight * 100);
         }
 
 
