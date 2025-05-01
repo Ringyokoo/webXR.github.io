@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Hat Try-On Demo</title>
-  <link rel="icon" href="data:,"> <!-- Устраняет ошибку favicon -->
-
+  <title>MediaPipe Face Mesh with Hat</title>
+  <link rel="icon" href="data:," />
   <script type="importmap">
     {
       "imports": {
@@ -15,84 +15,129 @@
     }
   </script>
   <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { width: 100%; height: 100%; display: block; }
-    #arButton {
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: white;
+    }
+
+    #container {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      background: black;
+      border: 1px solid #444;
+      overflow: hidden;
+    }
+
+    #video,
+    canvas {
       position: absolute;
-      bottom: 20px;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    #togglePoints {
+      position: absolute;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 10px 20px;
+      z-index: 2;
+      padding: 6px 12px;
       background: #007bff;
       color: white;
       border: none;
       cursor: pointer;
-      z-index: 10;
-    }
-    #video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: -1;
-      display: none;
     }
   </style>
 </head>
-<body>
-  <video id="video" playsinline></video>
-  <button id="arButton">Enter AR</button>
 
-  <!-- MediaPipe Holistic (не модули, подключаются как обычно) -->
+<body>
+  <div id="container">
+    <video id="video" playsinline autoplay></video>
+    <button id="togglePoints">Toggle Points</button>
+  </div>
+
+  <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/holistic.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
 
-  
-
-  <!-- Основной скрипт как модуль -->
+  <!-- Основной модуль -->
   <script type="module">
-    // Импорт Three.js и дополнений с использованием importmap
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { XRButton } from 'three/addons/webxr/XRButton.js';
 
-    // Инициализация Three.js
+    const container = document.getElementById('container');
+    const videoElement = document.getElementById('video');
+
+    const videoWidth = container.clientWidth;
+    const videoHeight = container.clientHeight;
+
+    // Сцена и камера
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.body.appendChild(renderer.domElement);
+    const camera = new THREE.OrthographicCamera(0, videoWidth, 0, videoHeight, -1000, 1000);
+    camera.position.z = 1;
 
-    // Освещение
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setSize(videoWidth, videoHeight);
+    container.appendChild(renderer.domElement);
+
+    // Точки лица
+    const facePoints = [];
+    for (let i = 0; i < 468; i++) {
+      const point = new THREE.Mesh(
+        new THREE.SphereGeometry(2, 8, 8),
+        new THREE.MeshBasicMaterial({ color: i === 10 ? 0x00ff00 : 0xffff00 })
+      );
+      point.visible = false;
+      scene.add(point);
+      facePoints.push(point);
+    }
+
+    // Удалить старое освещение, заменить этим:
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // мягкий белый свет
     scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(0, 1, 1);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(0, 1, 2); // немного спереди и сверху
     scene.add(directionalLight);
 
-    // Загрузка модели шляпы
-    let hatModel;
-    const loader = new GLTFLoader();
-    loader.load(
-      'hat-glb/source/HAT_GLB.glb', // Замените на URL вашей модели шляпы
-      (gltf) => {
-        hatModel = gltf.scene;
-        hatModel.scale.set(0.5, 0.5, 0.5);
-        scene.add(hatModel);
-      },
-      //(xhr) => console.log(`${(xhr.loaded / xhr.total * 100)}% loaded`),
-      (error) => console.error('Error loading model:', error)
-    );
+    // Дополнительный свет сзади для объема
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    backLight.position.set(0, -1, -1);
+    scene.add(backLight);
 
-    // Инициализация MediaPipe Holistic
-    const videoElement = document.getElementById('video');
-    videoElement.style.display = 'block';
+
+
+    // Шляпа
+    // Шляпа и группа
+    let hatGroup = new THREE.Group();
+    let hat;
+
+    const loader = new GLTFLoader();
+    loader.load('hat-glb/source/HAT_GLB.glb', (gltf) => {
+      hat = gltf.scene;
+      hat.scale.set(1, -1, 1); // Временно 1, будем менять позже
+      hat.position.set(0, 0, -70); // Сдвиг назад (чтобы центр шляпы был позади)
+      hatGroup.add(hat);
+      hatGroup.visible = false;
+      scene.add(hatGroup);
+    });
+
+    let showPoints = false;
+    document.getElementById('togglePoints').addEventListener('click', () => {
+      showPoints = !showPoints;
+      facePoints.forEach(p => p.visible = showPoints);
+      if (hat) hat.visible = true;
+    });
+
     const holistic = new Holistic({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/${file}`,
     });
@@ -103,73 +148,105 @@
     });
 
     holistic.onResults((results) => {
-      if (hatModel && results.faceLandmarks) {
-        const forehead = results.faceLandmarks[10];
-        const x = (forehead.x - 0.5) * 4;
-        const y = -(forehead.y - 0.5) * 4;
-        const z = -forehead.z * 4 - 2;
-        hatModel.position.set(x, y + 0.5, z);
-        hatModel.rotation.set(0, 0, 0);
+      if (results.faceLandmarks) {
+        results.faceLandmarks.forEach((landmark, i) => {
+          const x = landmark.x * videoWidth;
+          const y = landmark.y * videoHeight;
+          const z = -landmark.z * 300;
+
+          if (facePoints[i]) {
+            facePoints[i].position.set(x, y, z);
+            facePoints[i].visible = showPoints;
+          }
+        });
+
+        // Расположение шляпы по точке 10
+        // if (hat) {
+        //   const landmark = results.faceLandmarks[10];
+        //   const x = landmark.x * videoWidth;
+        //   const y = landmark.y * videoHeight + 30;
+        //   const z = -landmark.z * 300;
+        //   hat.position.set(x, y, z);
+        //   hat.visible = true;
+        // }
+
+        if (hatGroup && hat) {
+          const landmarks = results.faceLandmarks;
+
+          const left = landmarks[234];
+          const right = landmarks[454];
+          const center = landmarks[10];
+          const chin = landmarks[152];
+
+          const x = center.x * videoWidth;
+          const y = center.y * videoHeight + 10;
+          const z = -center.z * 300;
+
+          hatGroup.position.set(x, y, z);
+
+          // Повороты
+          const dx = left.x - right.x;
+          const dy = right.y - left.y;
+          const angleZ = Math.atan2(dy, dx);
+
+          const dX = right.x - left.x;
+          const dZy = right.z - left.z;
+          const angleY = Math.atan2(dZy, dX);
+
+          const angleX = (left.y + right.y) / 2 - center.y;
+          const headTiltX = angleX * 0.2;
+
+          hatGroup.rotation.set(headTiltX, angleY, -angleZ);
+          hatGroup.visible = true;
+
+          // Масштаб по расстоянию между висками
+          const distX = right.x - left.x;
+          const distY = right.y - left.y;
+          const distZ = right.z - left.z;
+
+          const distance = Math.sqrt(distX ** 2 + distY ** 2 + distZ ** 2);
+          const scaleFactor = distance * 120;
+
+          hat.scale.setScalar(scaleFactor);
+        }
+
+
+
       }
     });
 
-    // Настройка камеры устройства
-    const cameraUtils = new Camera(videoElement, {
-      onFrame: async () => {
-        await holistic.send({ image: videoElement });
-      },
-      width: 640,
-      height: 480,
-    });
-
-    // Доступ к веб-камере
+    // Камера устройства
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 640, height: 480 }
+        });
         videoElement.srcObject = stream;
-        videoElement.play();
+        await videoElement.play();
+
+        const cameraUtils = new window.Camera(videoElement, {
+          onFrame: async () => {
+            await holistic.send({ image: videoElement });
+          },
+          width: 640,
+          height: 480,
+        });
         cameraUtils.start();
       } catch (err) {
-        console.error('Error accessing camera:', err);
-        alert('Не удалось получить доступ к камере. Проверьте разрешения.');
+        alert('Не удалось получить доступ к камере.');
+        console.error(err);
       }
     }
     startCamera();
 
-    // WebXR для AR
-    document.getElementById('arButton').addEventListener('click', async () => {
-      if (!navigator.xr) {
-        alert('Ваш браузер не поддерживает WebXR.');
-        return;
-      }
-
-      try {
-        const session = await navigator.xr.requestSession('immersive-ar', {
-          optionalFeatures: ['dom-overlay', 'hit-test'],
-          domOverlay: { root: document.body },
-        });
-        renderer.xr.setSession(session);
-        videoElement.style.display = 'block';
-      } catch (err) {
-        console.error('Error starting AR session:', err);
-        alert('Не удалось запустить AR. Убедитесь, что вы используете HTTPS и поддерживаемое устройство.');
-      }
-    });
-
-    // Анимация
+    // Рендеринг
     function animate() {
       renderer.setAnimationLoop(() => {
         renderer.render(scene, camera);
       });
     }
     animate();
-
-    // Обработка изменения размера окна
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
   </script>
 </body>
+
 </html>
