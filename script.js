@@ -120,7 +120,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM5";
+        enableWebcamButton.innerText = "ENABLE WEBCAM6";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -129,7 +129,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE5";
+    enableWebcamButton.innerText = "DISABLE6";
 
     const constraints = {
         video: {
@@ -221,69 +221,63 @@ async function predictWebcam() {
             }
         }
         if (!hatRef || !results?.faceLandmarks?.length) return;
+
         const matrixRaw = results.facialTransformationMatrixes?.[0]?.data;
         if (matrixRaw && matrixRaw.every(Number.isFinite)) {
             const matrix = new THREE.Matrix4().fromArray(matrixRaw);
 
+            // ✅ Поворот из матрицы
             const rotation = new THREE.Quaternion();
-            const dummyPos = new THREE.Vector3();
-            const dummyScale = new THREE.Vector3();
-            matrix.decompose(dummyPos, rotation, dummyScale);
+            matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
 
-            // Дополнительный наклон шляпы "вперёд к камере"
-            const headTiltAngle = THREE.MathUtils.degToRad(5); // 5° вперёд
-            const tiltQuaternion = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(1, 0, 0), // ось X
-                headTiltAngle
-            );
-
-            // Итоговый поворот: сначала оригинальный, потом дополнительный наклон
-            rotation.multiply(tiltQuaternion);
-
-
-            // Ландмарки
+            // ✅ Позиция из landmarks
             const landmarks = results.faceLandmarks[0];
-            const head = landmarks[10];         // лоб
+            const forehead = landmarks[10];      // точка на лбу
             const leftEar = landmarks[234];
             const rightEar = landmarks[454];
 
-            // Масштаб координат лица
-            const FACE_SCALE = 1.8;
+            const FACE_SCALE = 1.5;
             const headVec = new THREE.Vector3(
-                (head.x - 0.5) * FACE_SCALE,
-                -(head.y - 0.5) * FACE_SCALE,
-                -head.z * FACE_SCALE
+                (forehead.x - 0.5) * FACE_SCALE,
+                -(forehead.y - 0.5) * FACE_SCALE,
+                -forehead.z * FACE_SCALE
             );
 
-            // Смещение вверх и назад (относительно головы)
+            // ✅ Смещения вверх и назад по осям головы
             const rotMatrix = new THREE.Matrix4().makeRotationFromQuaternion(rotation);
             const yAxis = new THREE.Vector3(0, 1, 0).applyMatrix4(rotMatrix).normalize();
             const zAxis = new THREE.Vector3(0, 0, 1).applyMatrix4(rotMatrix).normalize();
 
-            const heightOffset = -0.05;
+            const heightOffset = 0;
             const depthOffset = 0.22;
             const offset = yAxis.multiplyScalar(heightOffset).add(zAxis.multiplyScalar(-depthOffset));
+
             const finalPosition = headVec.clone().add(offset);
 
-            // Масштаб по ширине головы (в плоскости XZ)
+            // ✅ Масштаб по XZ-расстоянию между ушами
             const left = new THREE.Vector2(leftEar.x, leftEar.z);
             const right = new THREE.Vector2(rightEar.x, rightEar.z);
             const earDist = left.distanceTo(right);
-            const BASE_WIDTH = 3.4;  // эмпирически подобрано
+            const BASE_WIDTH = 3.4; // подбирается один раз
             const MODEL_SCALE = (earDist / BASE_WIDTH) * 1.5;
-
-            // Финальная матрица
             const scale = new THREE.Vector3(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+
+            // ✅ Дополнительный лёгкий наклон шляпы вперёд (опционально)
+            const headTiltAngle = THREE.MathUtils.degToRad(5);
+            const tiltQuaternion = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(1, 0, 0), headTiltAngle
+            );
+            rotation.multiply(tiltQuaternion);
+
+            // ✅ Финальная матрица
             const poseMatrix = new THREE.Matrix4().compose(finalPosition, rotation, scale);
-            console.log("✔️ applying pose", {
-                pos: finalPosition,
-                scale: scale,
-                rotation: rotation,
-            });
+
+            // Применение
             if (!hatRef.visible) hatRef.visible = true;
             hatRef.matrixAutoUpdate = false;
             hatRef.matrix.copy(poseMatrix);
         }
+
     }
 
     if (webcamRunning) window.requestAnimationFrame(predictWebcam);
