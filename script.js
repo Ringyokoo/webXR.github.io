@@ -120,7 +120,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM6";
+        enableWebcamButton.innerText = "ENABLE WEBCAM7";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -129,7 +129,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE6";
+    enableWebcamButton.innerText = "DISABLE7";
 
     const constraints = {
         video: {
@@ -257,10 +257,14 @@ async function predictWebcam() {
             // ✅ Масштаб по XZ-расстоянию между ушами
             const left = new THREE.Vector2(leftEar.x, leftEar.z);
             const right = new THREE.Vector2(rightEar.x, rightEar.z);
-            const earDist = left.distanceTo(right);
-            const BASE_WIDTH = 3.4; // подбирается один раз
-            const MODEL_SCALE = (earDist / BASE_WIDTH) * 1.5;
+
+            const MODEL_SCALE = 0.07; // или 0.07, 0.09 — подбирается вручную
             const scale = new THREE.Vector3(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+            
+            // const earDist = left.distanceTo(right);
+            // const BASE_WIDTH = 3.4; // подбирается один раз
+            // const MODEL_SCALE = (earDist / BASE_WIDTH) * 1.5;
+            // const scale = new THREE.Vector3(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
 
             // ✅ Дополнительный лёгкий наклон шляпы вперёд (опционально)
             const headTiltAngle = THREE.MathUtils.degToRad(5);
