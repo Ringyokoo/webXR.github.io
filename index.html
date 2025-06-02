@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MediaPipe Face Mesh with Hat</title>
-  <link rel="icon" href="data:," />
+  <title>MediaPipe Face Landmarker + Hat</title>
+
+  <!-- Material Design -->
+  <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+
+  <!-- Import maps for Three.js -->
   <script type="importmap">
     {
       "imports": {
@@ -14,246 +20,53 @@
       }
     }
   </script>
-  <style>
-    body {
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: white;
-    }
+<script src="
+https://cdn.jsdelivr.net/npm/lil-gui@0.20.0/dist/lil-gui.umd.min.js
+"></script>
+<link href="
+https://cdn.jsdelivr.net/npm/lil-gui@0.20.0/dist/lil-gui.min.css
+" rel="stylesheet">
 
-    #container {
-      position: relative;
-      width: 640px;
-      height: 480px;
-      background: black;
-      border: 1px solid #444;
-      overflow: hidden;
-    }
-
-    #video,
-    canvas {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      left: 0;
-      object-fit: cover;
-      z-index: 0;
-    }
-
-    #video {
-      transform: scaleX(-1);
-    }
-
-
-    #togglePoints {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-      padding: 6px 12px;
-      background: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <div id="container">
-    <video id="video" playsinline autoplay></video>
-    <button id="togglePoints">Toggle Points</button>
-  </div>
+  <h1>MediaPipe FaceLandmarker + Three.js Hat</h1>
 
-  <!-- MediaPipe -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/holistic.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
+  <section id="demos" class="invisible" >
+    <div class="controls" >
+      <button id="webcamButton" class="mdc-button mdc-button--raised">
+        <span class="mdc-button__ripple"></span>
+        <span class="mdc-button__label">ENABLE WEBCAM</span>
+      </button>
+      <button id="toggleLandmarksButton" class="mdc-button mdc-button--outlined">
+        <span class="mdc-button__ripple"></span>
+        <span class="mdc-button__label">TOGGLE LANDMARKS</span>
+      </button>
+      <button id="hatButton" class="mdc-button mdc-button--raised">
+        <span class="mdc-button__ripple"></span>
+        <span class="mdc-button__label">Вкл/Выкл шляпу</span>
+      </button>
+    </div>
 
-  <!-- Основной модуль -->
-  <script type="module">
-    import * as THREE from 'three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    <div id="cameraContainer">
+      <video id="webcam" autoplay playsinline ></video>
+      
+      <canvas class="output_canvas" id="output_canvas"></canvas>
+      <div id="ar-overlay-container" ></div>
+    </div>
+    <div id="loadingOverlay">Загрузка...</div>
+    <div id="scaleCam"></div>
+    <div class="blend-shapes">
+      <ul class="blend-shapes-list" id="video-blend-shapes"></ul>
+    </div>
+  </section>
 
-    const container = document.getElementById('container');
-    const videoElement = document.getElementById('video');
-
-    const videoWidth = container.clientWidth;
-    const videoHeight = container.clientHeight;
-
-    // Сцена и камера
-    const scene = new THREE.Scene();
-    // scene.scale.x = -1;
-
-    const camera = new THREE.OrthographicCamera(videoWidth, 0, 0, videoHeight, -1000, 1000);
-
-    camera.position.z = 1;
-
-    const renderer = new THREE.WebGLRenderer({ alpha: true });
-    renderer.setSize(videoWidth, videoHeight);
-    container.appendChild(renderer.domElement);
-
-    // Точки лица
-    const facePoints = [];
-    for (let i = 0; i < 468; i++) {
-      const point = new THREE.Mesh(
-        new THREE.SphereGeometry(2, 8, 8),
-        new THREE.MeshBasicMaterial({ color: i === 10 ? 0x00ff00 : 0xffff00 })
-      );
-      point.visible = false;
-      scene.add(point);
-      facePoints.push(point);
-    }
-
-    // освещение
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // мягкий белый свет
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(0, 1, 2); // немного спереди и сверху
-    scene.add(directionalLight);
-
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    backLight.position.set(0, -1, -1);
-    scene.add(backLight);
-
-
-
-    // Шляпа
-    // Шляпа и группа
-    let hatGroup = new THREE.Group();
-    let hat;
-
-    const loader = new GLTFLoader();
-    loader.load('hat-glb/source/HAT_GLB.glb', (gltf) => {
-      hat = gltf.scene;
-      hat.scale.set(1, -1, 1); // Временно 1, будем менять позже
-      hat.position.set(0, 0, -70); // Сдвиг назад (чтобы центр шляпы был позади)
-      hatGroup.add(hat);
-      hatGroup.visible = false;
-      scene.add(hatGroup);
-    });
-
-    let showPoints = false;
-    document.getElementById('togglePoints').addEventListener('click', () => {
-      showPoints = !showPoints;
-      facePoints.forEach(p => p.visible = showPoints);
-      if (hat) hat.visible = true;
-    });
-
-    const holistic = new Holistic({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/${file}`,
-    });
-    holistic.setOptions({
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-
-    holistic.onResults((results) => {
-      if (results.faceLandmarks) {
-        results.faceLandmarks.forEach((landmark, i) => {
-          const x = landmark.x * videoWidth;
-          const y = landmark.y * videoHeight;
-          const z = -landmark.z * 300;
-
-          if (facePoints[i]) {
-            facePoints[i].position.set(x, y, z);
-            facePoints[i].visible = showPoints;
-          }
-        });
-
-        // Расположение шляпы по точке 10
-        // if (hat) {
-        //   const landmark = results.faceLandmarks[10];
-        //   const x = landmark.x * videoWidth;
-        //   const y = landmark.y * videoHeight + 30;
-        //   const z = -landmark.z * 300;
-        //   hat.position.set(x, y, z);
-        //   hat.visible = true;
-        // }
-
-        if (hatGroup && hat) {
-          const landmarks = results.faceLandmarks;
-
-          const left = landmarks[234];
-          const right = landmarks[454];
-          const center = landmarks[10];
-          const chin = landmarks[152];
-
-          const x = center.x * videoWidth;
-          const y = center.y * videoHeight + 10;
-          const z = -center.z * 300;
-
-          hatGroup.position.set(x, y, z);
-
-          // Повороты
-          const dx = left.x - right.x;
-          const dy = right.y - left.y;
-          const angleZ = Math.atan2(dy, dx);
-
-          const dX = right.x - left.x;
-          const dZy = right.z - left.z;
-          const angleY = Math.atan2(dZy, dX);
-
-          const angleX = (left.y + right.y) / 2 - center.y;
-          const headTiltX = angleX * 0.2;
-
-          hatGroup.rotation.set(headTiltX, angleY, -angleZ);
-          hatGroup.visible = true;
-
-          // Масштаб по расстоянию между висками
-          const distX = right.x - left.x;
-          // const distY = right.y - left.y;
-          // const distZ = right.z - left.z;
-
-          // const distance = Math.sqrt(distX ** 2 + distY ** 2 + distZ ** 2);
-          // const scaleFactor = 100;
-          // console.log(videoWidth/videoHeight)
-          hat.scale.setScalar(distX * videoWidth / videoHeight * 100);
-        }
-
-
-
-      }
-    });
-
-    // Камера устройства
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: 640, height: 480 }
-        });
-        videoElement.srcObject = stream;
-        await videoElement.play();
-
-        const cameraUtils = new window.Camera(videoElement, {
-          onFrame: async () => {
-            await holistic.send({ image: videoElement });
-          },
-          width: 640,
-          height: 480,
-        });
-        cameraUtils.start();
-      } catch (err) {
-        alert('Не удалось получить доступ к камере.');
-        console.error(err);
-      }
-    }
-    startCamera();
-
-    // Рендеринг
-    function animate() {
-      renderer.setAnimationLoop(() => {
-        renderer.render(scene, camera);
-      });
-    }
-    animate();
-  </script>
+  <!-- Отдельный контейнер для AR-канваса (Three.js) -->
+  <!-- <div id="ar-canvas-container">
+    
+  </div> -->
+  <script type="module" src="script.js"></script>
 </body>
 
 </html>
