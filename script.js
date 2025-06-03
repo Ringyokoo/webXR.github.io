@@ -15,16 +15,16 @@ import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.17/+esm';
 
 
 const guiParams = {
-    height: 6.75,       // вверх по голове (ось Y)
-    depth: 5.43,        // назад по голове (ось Z)
-    scale: 2.4         // размер шляпы
+    height: 3.23,       // вверх по голове (ось Y)
+    depth: 7.27,        // назад по голове (ось Z)
+    scale: 6.32,
 };
 
 
 const gui = new GUI();
-gui.add(guiParams, 'height', -10, 10, 0.01).name('HEIGHT_OFFSET');
+gui.add(guiParams, 'height', 0, 10, 0.01).name('HEIGHT_OFFSET');
 gui.add(guiParams, 'depth', 0, 10, 0.01).name('DEPTH_OFFSET');
-gui.add(guiParams, 'scale', 0.1, 10, 0.01).name('MODEL_SCALE');
+gui.add(guiParams, 'scale', 0.1, 20, 0.01).name('MODEL_SCALE');
 
 // const gui = new GUI();
 // gui.add(guiParams, 'depth', 0.0, 0.5, 0.01).name('DEPTH_OFFSET');
@@ -168,7 +168,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM";
+        enableWebcamButton.innerText = "ENABLE WEBCAM5";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -177,12 +177,12 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE";
+    enableWebcamButton.innerText = "DISABLE5";
 
     const constraints = {
         video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
+            width: { ideal: 960 },
+            height: { ideal: 720 },
             aspectRatio: 4 / 3,
             facingMode: "user"
         }
@@ -199,9 +199,9 @@ let results = undefined;
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 async function predictWebcam() {
-    const videoWidth = 640;
-    const videoHeight = 480;
-    const aspect = videoWidth / videoHeight;
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    const aspect = 4 / 3;
 
     // const fixedWidth = 640;
     // const fixedHeight = 480;
@@ -261,35 +261,82 @@ async function predictWebcam() {
 
         const matrixRaw = results.facialTransformationMatrixes?.[0]?.data;
         if (matrixRaw && matrixRaw.every(Number.isFinite)) {
+            // const matrix = new THREE.Matrix4().fromArray(matrixRaw);
+
+            // // Извлекаем только поворот и позицию (масштаб игнорируем)
+            // const position = new THREE.Vector3();
+            // const rotation = new THREE.Quaternion();
+            // matrix.decompose(position, rotation, new THREE.Vector3());
+
+            // // matrix.decompose(position, rotation, new THREE.Vector3());
+            // const depth = position.z; // глубина центра головы
+            // const referenceDepth = guiParams.referenceDepth; // нормальное расстояние (визуально удобное)
+            
+            // const depthRatio = referenceDepth / depth; // ближе = больше масштаб
+            // // Нелинейная компенсация высоты (например, sqrt)
+            // const dynamicHeight = guiParams.height * Math.sqrt(depthRatio, 0.3);
+            // const dynamicScale = guiParams.scale * depthRatio;
+
+            // // --- Смещения
+            // const headUp = new THREE.Vector3(0, dynamicHeight, 0).applyQuaternion(rotation);
+            // const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
+            // const x = new THREE.Vector3(-guiParams.x, 0, 0).applyQuaternion(rotation);
+            // const finalPosition = position.clone().add(headUp).add(headBack).add(x);
+
+            // // --- Наклон
+            // const pitchOffset = new THREE.Quaternion().setFromEuler(
+            //     new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
+            // );
+            // rotation.multiply(pitchOffset);
+
+            // // --- Матрица
+            // const poseMatrix = new THREE.Matrix4().compose(
+            //     finalPosition,
+            //     rotation,
+            //     new THREE.Vector3(dynamicScale, dynamicScale, dynamicScale)
+            // );
+
+            // hatRef.matrixAutoUpdate = false;
+            // hatRef.matrix.copy(poseMatrix);
+            // hatRef.visible = true;
+
             const matrix = new THREE.Matrix4().fromArray(matrixRaw);
+const position = new THREE.Vector3();
+const rotation = new THREE.Quaternion();
+matrix.decompose(position, rotation, new THREE.Vector3());
 
-            // Извлекаем только поворот и позицию (масштаб игнорируем)
-            const position = new THREE.Vector3();
-            const rotation = new THREE.Quaternion();
-            matrix.decompose(position, rotation, new THREE.Vector3());
+// === Размер головы (на экране)
+const l10 = results.faceLandmarks[0][10];
+const l152 = results.faceLandmarks[0][152];
+const faceHeightND = Math.abs(l10.y - l152.y);
+const faceScaleFactor = 1 / faceHeightND;
 
-            // === 1. Смещение вверх вдоль локальной оси головы (ось Y в голове)
-            // === Смещение вверх (по Y головы) и назад (по Z головы)
-            const headUp = new THREE.Vector3(0, guiParams.height, 0).applyQuaternion(rotation);
-            const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
-            const finalPosition = position.clone().add(headUp).add(headBack);
+// === Динамика
+const dynamicScale = guiParams.scale * 1/faceScaleFactor ;
+const dynamicHeight = guiParams.height * faceScaleFactor * 0.75;
 
-            // === 2. Добавляем лёгкий наклон головы вперёд (ось X)
-            const pitchOffset = new THREE.Quaternion().setFromEuler(
-                new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
-            );
-            rotation.multiply(pitchOffset);
+// === Смещения
+const headUp = new THREE.Vector3(0, dynamicHeight, 0).applyQuaternion(rotation);
+const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
+const finalPosition = position.clone().add(headUp).add(headBack);
 
-            // === 3. Сборка финальной матрицы с масштабом
-            const poseMatrix = new THREE.Matrix4().compose(
-                finalPosition,
-                rotation,
-                new THREE.Vector3(guiParams.scale, guiParams.scale, guiParams.scale)
-            );
+// === Наклон
+const pitchOffset = new THREE.Quaternion().setFromEuler(
+  new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
+);
+rotation.multiply(pitchOffset);
 
-            hatRef.matrixAutoUpdate = false;
-            hatRef.matrix.copy(poseMatrix);
-            hatRef.visible = true;
+// === Сборка матрицы
+const poseMatrix = new THREE.Matrix4().compose(
+  finalPosition,
+  rotation,
+  new THREE.Vector3(dynamicScale, dynamicScale, dynamicScale)
+);
+
+hatRef.matrixAutoUpdate = false;
+hatRef.matrix.copy(poseMatrix);
+hatRef.visible = true;
+
         }
 
     }
