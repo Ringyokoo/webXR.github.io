@@ -179,10 +179,10 @@ async function predictWebcam() {
     const videoHeight = videoWidth * 3 / 4;
     // console.log("videoWidth:", videoWidth, "videoHeight:", videoHeight);
 
-    if (videoHeight > videoWidth && window.innerWidth < window.innerHeight) {
-        // принудительно переворачиваем размеры
-        [videoWidth, videoHeight] = [videoHeight, videoWidth];
-    }
+    // if (videoHeight > videoWidth && window.innerWidth < window.innerHeight) {
+    //     // принудительно переворачиваем размеры
+    //     [videoWidth, videoHeight] = [videoHeight, videoWidth];
+    // }
 
 
     renderer.setSize(videoWidth, videoHeight, false);
