@@ -168,7 +168,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM5";
+        enableWebcamButton.innerText = "ENABLE WEBCAM";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -177,7 +177,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE5";
+    enableWebcamButton.innerText = "DISABLE";
 
     const constraints = {
         video: {
