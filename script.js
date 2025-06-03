@@ -36,7 +36,7 @@ const toggleLandmarksButton = document.getElementById("toggleLandmarksButton");
 const videoBlendShapes = document.getElementById("video-blend-shapes");
 const video = document.getElementById("webcam");
 const canvasElement = document.getElementById("output_canvas");
-const canvasCtx = canvasElement.getContext("2d");
+let canvasCtx = canvasElement.getContext("2d");
 const enableWebcamButton = document.getElementById("webcamButton");
 const hatButton = document.getElementById("hatButton");
 const overlay = document.getElementById("ar-overlay-container");
@@ -64,18 +64,18 @@ async function loadHat() {
             // hat.rotation.set(0, 0, 0);
             // hat.scale.set(1, 1, 1);
             // === Вычисляем bounding box ===
-            const bbox = new THREE.Box3().setFromObject(hat);
-            const size = new THREE.Vector3();
-            bbox.getSize(size);
-            console.log("Размер шляпы в glb:", size);
+            // const bbox = new THREE.Box3().setFromObject(hat);
+            // const size = new THREE.Vector3();
+            // bbox.getSize(size);
+            // console.log("Размер шляпы в glb:", size);
             // === Вычисляем bounding box ===
             // hat.position.set(0,gui.height, 0);
             hat.matrixAutoUpdate = false;
             hat.visible = false;
             scene.add(hat);
             hatRef = hat;
-            console.log("Загружена модель:", gltf.scene);
-            console.log("Дочерние объекты:", gltf.scene.children);
+            // console.log("Загружена модель:", gltf.scene);
+            // console.log("Дочерние объекты:", gltf.scene.children);
             resolve(hat);
         });
     });
@@ -140,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM4444";
+        enableWebcamButton.innerText = "ENABLE WEBCAM5";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -149,15 +149,15 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE4444";
+    enableWebcamButton.innerText = "DISABLE5";
 
     const constraints = {
         video: {
-            width: { ideal: 960 },
+            width: { ideal: 1280 },
             height: { ideal: 720 },
-            aspectRatio: 4 / 3,
+            // aspectRatio: 4 / 3,
             facingMode: "user",
-            resizeMode: "crop-and-scale"
+            // resizeMode: "crop-and-scale"
         }
     };
 
@@ -165,6 +165,15 @@ async function enableCam() {
         video.srcObject = stream;
         video.addEventListener("loadeddata", predictWebcam, { once: true });
     });
+
+    navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+            devices.forEach(device => {
+                if (device.kind === 'videoinput') {
+                    console.log(device.label);
+                }
+            });
+        });
 }
 
 let lastVideoTime = -1;
@@ -173,16 +182,21 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 
 async function predictWebcam() {
 
-    const aspect = 4 / 3;
+    //  if (video.videoHeight > video.videoWidth && window.innerWidth < window.innerHeight) {
+    //     // принудительно переворачиваем размеры
+    //     [video.videoWidth, video.videoHeight] = [video.videoHeight, video.videoWidth];
+    // }
+
+    
     // const videoHeight = video.clientHeight;
     const videoWidth = video.clientWidth;
-    const videoHeight = videoWidth * 3 / 4;
-    // console.log("videoWidth:", videoWidth, "videoHeight:", videoHeight);
+    const videoHeight = video.clientHeight;
 
-    // if (videoHeight > videoWidth && window.innerWidth < window.innerHeight) {
-    //     // принудительно переворачиваем размеры
-    //     [videoWidth, videoHeight] = [videoHeight, videoWidth];
-    // }
+    const aspect = videoWidth/videoHeight;
+    // alert(video.videoWidth / video.videoHeight + ' ' + video.clientWidth / video.clientHeight);
+    // console.log(video.videoWidth / video.videoHeight, video.clientWidth / video.clientHeight);
+
+
 
 
     renderer.setSize(videoWidth, videoHeight, false);
@@ -195,6 +209,7 @@ async function predictWebcam() {
     canvasElement.style.height = videoHeight + "px";
     canvasElement.width = videoWidth;
     canvasElement.height = videoHeight;
+
 
 
     if (runningMode === "IMAGE") {
@@ -250,6 +265,10 @@ async function predictWebcam() {
             const dynamicScale = guiParams.scale * 1 / faceScaleFactor;
             const dynamicHeight = guiParams.height * faceScaleFactor * 0.75;
 
+            const nonlinear = Math.sqrt(faceScaleFactor); // или Math.pow(faceScaleFactor, 0.6)
+            // const dynamicScale = guiParams.scale * nonlinear;
+            // const dynamicHeight = guiParams.height * nonlinear;
+
             // === Смещения
             const headUp = new THREE.Vector3(0, dynamicHeight, 0).applyQuaternion(rotation);
             const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
@@ -257,7 +276,7 @@ async function predictWebcam() {
 
             // === Наклон
             const pitchOffset = new THREE.Quaternion().setFromEuler(
-                new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
+                new THREE.Euler(THREE.MathUtils.degToRad(5), 0, 0)
             );
             rotation.multiply(pitchOffset);
 
