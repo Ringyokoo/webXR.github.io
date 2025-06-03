@@ -199,9 +199,12 @@ let results = undefined;
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 async function predictWebcam() {
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
+    // const videoWidth = video.videoWidth;
+    // const videoHeight = video.videoHeight;
     const aspect = 4 / 3;
+    const videoHeight = video.videoHeight; // допустим, 720
+const videoWidth = videoHeight * aspect; // будет 960
+    // const aspect = 4 / 3;
 
     // const fixedWidth = 640;
     // const fixedHeight = 480;
