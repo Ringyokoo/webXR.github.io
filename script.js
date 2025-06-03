@@ -26,11 +26,7 @@ gui.add(guiParams, 'height', 0, 10, 0.01).name('HEIGHT_OFFSET');
 gui.add(guiParams, 'depth', 0, 10, 0.01).name('DEPTH_OFFSET');
 gui.add(guiParams, 'scale', 0.1, 20, 0.01).name('MODEL_SCALE');
 
-// const gui = new GUI();
-// gui.add(guiParams, 'depth', 0.0, 0.5, 0.01).name('DEPTH_OFFSET');
-// gui.add(guiParams, 'height', -0.3, 0.3, 0.01).name('HEIGHT_OFFSET');
-// gui.add(guiParams, 'scale', 0.05, 0.5, 0.01).name('MODEL_SCALE');
-// gui.add(guiParams, 'faceScale', 0.5, 3.0, 0.01).name('SCALE');
+
 //============================================================================
 
 const { FaceLandmarker, FilesetResolver, DrawingUtils } = vision;
@@ -85,30 +81,6 @@ async function loadHat() {
     });
 }
 
-// if (!hatRef) {
-//     const loader = new GLTFLoader();
-//     loader.load('hat_glb_bej.glb', (gltf) => {
-//         const hat = gltf.scene;
-//         hat.name = "hat";
-//         // hat.position.set(0, 0, 0);
-//         // hat.rotation.set(0, 0, 0);
-//         // hat.scale.set(1, 1, 1);
-//         hat.matrixAutoUpdate = false;
-//         hat.visible = false; // 👈 не показывать сразу
-//         // === Вычисляем bounding box ===
-//         const bbox = new THREE.Box3().setFromObject(hat);
-//         const size = new THREE.Vector3();
-//         bbox.getSize(size);
-
-//         console.log("Размер шляпы в glb:", size);
-
-//         scene.add(hat);
-//         hatRef = hat;
-//         console.log("Загружена модель:", gltf.scene);
-//         console.log("Дочерние объекты:", gltf.scene.children);
-
-//     });
-// }
 
 
 
@@ -168,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM";
+        enableWebcamButton.innerText = "ENABLE WEBCAM5";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -177,14 +149,15 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE1";
+    enableWebcamButton.innerText = "DISABLE5";
 
     const constraints = {
         video: {
-            width: { ideal: 960 },
-            height: { ideal: 720 },
+            width: { ideal: 640 },
+            height: { ideal: 480 },
             aspectRatio: 4 / 3,
-            facingMode: "user"
+            facingMode: "user",
+            resizeMode: "crop-and-scale"
         }
     };
 
@@ -201,8 +174,8 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 async function predictWebcam() {
     
     const aspect = 4 / 3;
-    const videoHeight = video.videoHeight;
-    const videoWidth = videoHeight * aspect;
+    const videoHeight = 640;
+    const videoWidth = 480;
 
 
     // const fixedWidth = 640;
@@ -224,18 +197,6 @@ async function predictWebcam() {
     canvasElement.style.height = videoHeight + "px";
     canvasElement.width = videoWidth;
     canvasElement.height = videoHeight;
-
-    // if (hatGroup && !hatGroup.userData.initialized) {
-    //     const loader = new GLTFLoader();
-    //     loader.load('hat_glb_bej.glb', (gltf) => {
-    //         const hat = gltf.scene;
-    //         hat.name = "hat"; // если нужно потом найти
-    //         scene.add(hat);
-    //         hat.matrixAutoUpdate = false;
-    //         hatRef = hat; // сохранить для обновлений
-    //     });
-    //     hatGroup.userData.initialized = true;
-    // }
 
 
     if (runningMode === "IMAGE") {
