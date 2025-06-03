@@ -140,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM2222";
+        enableWebcamButton.innerText = "ENABLE WEBCAM3333";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -149,7 +149,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE2222";
+    enableWebcamButton.innerText = "DISABLE3333";
 
     const constraints = {
         video: {
@@ -174,10 +174,14 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 async function predictWebcam() {
 
     const aspect = 4 / 3;
-    const videoHeight = video.clientHeight;
+    const videoHeight = video.videoHeight;;
     const videoWidth = videoHeight * aspect;
 
-
+    if (videoHeight > videoWidth && window.innerWidth < window.innerHeight) {
+        // принудительно переворачиваем размеры
+        [videoWidth, videoHeight] = [videoHeight, videoWidth];
+    }
+    
     renderer.setSize(videoWidth, videoHeight, false);
     if (!camera) {
         camera = new THREE.PerspectiveCamera(45, aspect, 0.01, 1000);
