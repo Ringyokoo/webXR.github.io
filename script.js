@@ -199,10 +199,11 @@ let results = undefined;
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 async function predictWebcam() {
-    const container = document.getElementById("cameraContainer");
-    const videoWidth = container.clientWidth;
-    const videoHeight = videoWidth * (3 / 4);
+    
     const aspect = 4 / 3;
+    const videoHeight = video.videoHeight;
+    const videoWidth = videoHeight * aspect;
+
 
     // const fixedWidth = 640;
     // const fixedHeight = 480;
@@ -215,9 +216,9 @@ async function predictWebcam() {
         camera.position.set(0, 0, 5);
     }
 
-    
+    const container = document.getElementById("cameraContainer");
     // container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
-    video.style.width = videoWidth + "px";
+    video.style.width = videoWidth > container.clientWidth ? container.clientWidth + "px" : videoWidth + "px";
     video.style.height = videoHeight + "px";
     canvasElement.style.width = videoWidth + "px";
     canvasElement.style.height = videoHeight + "px";
@@ -272,7 +273,7 @@ async function predictWebcam() {
             // // matrix.decompose(position, rotation, new THREE.Vector3());
             // const depth = position.z; // глубина центра головы
             // const referenceDepth = guiParams.referenceDepth; // нормальное расстояние (визуально удобное)
-            
+
             // const depthRatio = referenceDepth / depth; // ближе = больше масштаб
             // // Нелинейная компенсация высоты (например, sqrt)
             // const dynamicHeight = guiParams.height * Math.sqrt(depthRatio, 0.3);
@@ -302,41 +303,41 @@ async function predictWebcam() {
             // hatRef.visible = true;
 
             const matrix = new THREE.Matrix4().fromArray(matrixRaw);
-const position = new THREE.Vector3();
-const rotation = new THREE.Quaternion();
-matrix.decompose(position, rotation, new THREE.Vector3());
+            const position = new THREE.Vector3();
+            const rotation = new THREE.Quaternion();
+            matrix.decompose(position, rotation, new THREE.Vector3());
 
-// === Размер головы (на экране)
-const l10 = results.faceLandmarks[0][10];
-const l152 = results.faceLandmarks[0][152];
-const faceHeightND = Math.abs(l10.y - l152.y);
-const faceScaleFactor = 1 / faceHeightND;
+            // === Размер головы (на экране)
+            const l10 = results.faceLandmarks[0][10];
+            const l152 = results.faceLandmarks[0][152];
+            const faceHeightND = Math.abs(l10.y - l152.y);
+            const faceScaleFactor = 1 / faceHeightND;
 
-// === Динамика
-const dynamicScale = guiParams.scale * 1/faceScaleFactor ;
-const dynamicHeight = guiParams.height * faceScaleFactor * 0.75;
+            // === Динамика
+            const dynamicScale = guiParams.scale * 1 / faceScaleFactor;
+            const dynamicHeight = guiParams.height * faceScaleFactor * 0.75;
 
-// === Смещения
-const headUp = new THREE.Vector3(0, dynamicHeight, 0).applyQuaternion(rotation);
-const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
-const finalPosition = position.clone().add(headUp).add(headBack);
+            // === Смещения
+            const headUp = new THREE.Vector3(0, dynamicHeight, 0).applyQuaternion(rotation);
+            const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
+            const finalPosition = position.clone().add(headUp).add(headBack);
 
-// === Наклон
-const pitchOffset = new THREE.Quaternion().setFromEuler(
-  new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
-);
-rotation.multiply(pitchOffset);
+            // === Наклон
+            const pitchOffset = new THREE.Quaternion().setFromEuler(
+                new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
+            );
+            rotation.multiply(pitchOffset);
 
-// === Сборка матрицы
-const poseMatrix = new THREE.Matrix4().compose(
-  finalPosition,
-  rotation,
-  new THREE.Vector3(dynamicScale, dynamicScale, dynamicScale)
-);
+            // === Сборка матрицы
+            const poseMatrix = new THREE.Matrix4().compose(
+                finalPosition,
+                rotation,
+                new THREE.Vector3(dynamicScale, dynamicScale, dynamicScale)
+            );
 
-hatRef.matrixAutoUpdate = false;
-hatRef.matrix.copy(poseMatrix);
-hatRef.visible = true;
+            hatRef.matrixAutoUpdate = false;
+            hatRef.matrix.copy(poseMatrix);
+            hatRef.visible = true;
 
         }
 
