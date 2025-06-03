@@ -177,7 +177,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE";
+    enableWebcamButton.innerText = "DISABLE1";
 
     const constraints = {
         video: {
@@ -218,8 +218,8 @@ async function predictWebcam() {
 
     const container = document.getElementById("cameraContainer");
     // container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
-    video.style.width = videoWidth > container.clientWidth ? container.clientWidth + "px" : videoWidth + "px";
-    video.style.height = videoHeight + "px";
+    // video.style.width = videoWidth > container.clientWidth ? container.clientWidth + "px" : videoWidth + "px";
+    // video.style.height = videoHeight + "px";
     canvasElement.style.width = videoWidth + "px";
     canvasElement.style.height = videoHeight + "px";
     canvasElement.width = videoWidth;
