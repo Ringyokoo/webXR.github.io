@@ -168,7 +168,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM5";
+        enableWebcamButton.innerText = "ENABLE WEBCAM";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -177,13 +177,13 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE5";
+    enableWebcamButton.innerText = "DISABLE";
 
     const constraints = {
         video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            aspectRatio: 16 / 9,
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            aspectRatio: 4 / 3,
             facingMode: "user"
         }
     };
@@ -199,13 +199,18 @@ let results = undefined;
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 async function predictWebcam() {
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
+    const videoWidth = 640;
+    const videoHeight = 480;
     const aspect = videoWidth / videoHeight;
+
+    // const fixedWidth = 640;
+    // const fixedHeight = 480;
+    // const fixedAspect = fixedWidth / fixedHeight;
+
 
     renderer.setSize(videoWidth, videoHeight, false);
     if (!camera) {
-        camera = new THREE.PerspectiveCamera(50, aspect, 0.01, 1000);
+        camera = new THREE.PerspectiveCamera(45, aspect, 0.01, 1000);
         camera.position.set(0, 0, 5);
     }
 
