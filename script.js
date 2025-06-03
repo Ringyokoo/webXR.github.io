@@ -140,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM098";
+        enableWebcamButton.innerText = "ENABLE WEBCAM1111";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -149,7 +149,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE098";
+    enableWebcamButton.innerText = "DISABLE1111";
 
     const constraints = {
         video: {
@@ -177,6 +177,11 @@ async function predictWebcam() {
     const videoHeight = video.videoHeight;
     const videoWidth = videoHeight * aspect;
 
+    const dpr = window.devicePixelRatio || 1;
+
+    renderer.setSize(videoWidth, videoHeight, false);
+    renderer.setPixelRatio(dpr); // ← ты это уже делаешь
+
 
     // const fixedWidth = 640;
     // const fixedHeight = 480;
@@ -193,10 +198,19 @@ async function predictWebcam() {
     // container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
     // video.style.width = videoWidth > container.clientWidth ? container.clientWidth + "px" : videoWidth + "px";
     // video.style.height = videoHeight + "px";
+    // canvasElement.style.width = videoWidth + "px";
+    // canvasElement.style.height = videoHeight + "px";
+    // canvasElement.width = videoWidth;
+    // canvasElement.height = videoHeight;
+
+     // Правим размеры канваса
+    canvasElement.width = videoWidth * dpr;
+    canvasElement.height = videoHeight * dpr;
     canvasElement.style.width = videoWidth + "px";
     canvasElement.style.height = videoHeight + "px";
-    canvasElement.width = videoWidth;
-    canvasElement.height = videoHeight;
+
+    canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
+    canvasCtx.scale(dpr, dpr);
 
 
     if (runningMode === "IMAGE") {
