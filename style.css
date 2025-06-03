@@ -13,13 +13,9 @@ h1 {
 /* Контейнер с камерой и канвасами */
 #cameraContainer {
     position: relative;
-
-    /* width: 640px;
-    height: 480px; */
-
-    /* max-width: 100vw; */
     aspect-ratio: 4 / 3;
     margin-top: 1em;
+    width: 100%;
 }
 
 /* Видео и канвасы: выровнены, перевёрнуты по Y */
@@ -30,7 +26,7 @@ h1 {
     top: 0;
     left: 0;
     width: 100% !important;
-    height: 100% !important;
+    /* height: 100% !important; */
     transform: rotateY(180deg);
     pointer-events: none;
 
@@ -41,14 +37,14 @@ video {
     position: static;
     display: block;
     object-fit: cover;
-    width: 100%;
-    height: 100%;
+    /* width: 100%;
+    height: 100%; */
 }
 
-#webcam {
+/* #webcam {
     aspect-ratio: 4 / 3;
-    width: 100%;
-}
+    /* width: 100%; 
+} */
 
 /* Контейнер для Three.js canvas */
 #ar-overlay-container {
@@ -56,7 +52,7 @@ video {
     top: 0;
     left: 0;
     width: 100% !important;
-    height: 100% !important;
+    /* height: 100% !important; */
     pointer-events: none;
 }
 
@@ -99,9 +95,9 @@ video {
 
 
 @media screen and (max-width: 980px) {
-    #cameraContainer {
+    /* #cameraContainer {
         width: 100%;
-    }
+    } */
 
     body {
         margin: 0em;
