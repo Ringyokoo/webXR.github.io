@@ -201,7 +201,7 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 async function predictWebcam() {
     const container = document.getElementById("cameraContainer");
     const videoWidth = container.clientWidth;
-    const videoHeight = video.videoHeight;
+    const videoHeight = videoWidth * (3 / 4);
     const aspect = 4 / 3;
 
     // const fixedWidth = 640;
