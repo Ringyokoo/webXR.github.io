@@ -3,7 +3,7 @@ import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3"
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 //============================================================================
-// import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.17/+esm';
+import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.17/+esm';
 
 
 // const guiParams = {
@@ -12,6 +12,19 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 //     scale: 0.13,       // размер
 //     faceScale: 2.1,     // масштаб координат
 // };
+
+
+const guiParams = {
+    height: 6.75,       // вверх по голове (ось Y)
+    depth: 5.43,        // назад по голове (ось Z)
+    scale: 2.4         // размер шляпы
+};
+
+
+const gui = new GUI();
+gui.add(guiParams, 'height', -10, 10, 0.01).name('HEIGHT_OFFSET');
+gui.add(guiParams, 'depth', 0, 10, 0.01).name('DEPTH_OFFSET');
+gui.add(guiParams, 'scale', 0.1, 10, 0.01).name('MODEL_SCALE');
 
 // const gui = new GUI();
 // gui.add(guiParams, 'depth', 0.0, 0.5, 0.01).name('DEPTH_OFFSET');
@@ -51,16 +64,51 @@ async function loadHat() {
         loader.load('hat_glb_bej.glb', (gltf) => {
             const hat = gltf.scene;
             hat.name = "hat";
-            hat.position.set(0, 0, 0);
-            hat.rotation.set(0, 0, 0);
-            hat.scale.set(1, 1, 1);
+            // hat.position.set(0, 0, 0);
+            // hat.rotation.set(0, 0, 0);
+            // hat.scale.set(1, 1, 1);
+            // === Вычисляем bounding box ===
+            const bbox = new THREE.Box3().setFromObject(hat);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            console.log("Размер шляпы в glb:", size);
+            // === Вычисляем bounding box ===
+            // hat.position.set(0,gui.height, 0);
             hat.matrixAutoUpdate = false;
             hat.visible = false;
             scene.add(hat);
+            hatRef = hat;
+            console.log("Загружена модель:", gltf.scene);
+            console.log("Дочерние объекты:", gltf.scene.children);
             resolve(hat);
         });
     });
 }
+
+// if (!hatRef) {
+//     const loader = new GLTFLoader();
+//     loader.load('hat_glb_bej.glb', (gltf) => {
+//         const hat = gltf.scene;
+//         hat.name = "hat";
+//         // hat.position.set(0, 0, 0);
+//         // hat.rotation.set(0, 0, 0);
+//         // hat.scale.set(1, 1, 1);
+//         hat.matrixAutoUpdate = false;
+//         hat.visible = false; // 👈 не показывать сразу
+//         // === Вычисляем bounding box ===
+//         const bbox = new THREE.Box3().setFromObject(hat);
+//         const size = new THREE.Vector3();
+//         bbox.getSize(size);
+
+//         console.log("Размер шляпы в glb:", size);
+
+//         scene.add(hat);
+//         hatRef = hat;
+//         console.log("Загружена модель:", gltf.scene);
+//         console.log("Дочерние объекты:", gltf.scene.children);
+
+//     });
+// }
 
 
 
@@ -120,7 +168,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM7";
+        enableWebcamButton.innerText = "ENABLE WEBCAM5";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -129,7 +177,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE7";
+    enableWebcamButton.innerText = "DISABLE5";
 
     const constraints = {
         video: {
@@ -157,8 +205,8 @@ async function predictWebcam() {
 
     renderer.setSize(videoWidth, videoHeight, false);
     if (!camera) {
-        camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-        camera.position.set(0, 0, 1.2);
+        camera = new THREE.PerspectiveCamera(50, aspect, 0.01, 1000);
+        camera.position.set(0, 0, 5);
     }
 
     const container = document.getElementById("cameraContainer");
@@ -181,23 +229,7 @@ async function predictWebcam() {
     //     });
     //     hatGroup.userData.initialized = true;
     // }
-    if (!hatRef) {
-        const loader = new GLTFLoader();
-        loader.load('hat_glb_bej.glb', (gltf) => {
-            const hat = gltf.scene;
-            hat.name = "hat";
-            hat.position.set(0, 0, 0);
-            hat.rotation.set(0, 0, 0);
-            hat.scale.set(1, 1, 1);
-            hat.matrixAutoUpdate = false;
-            hat.visible = false; // 👈 не показывать сразу
-            scene.add(hat);
-            hatRef = hat;
-            console.log("Загружена модель:", gltf.scene);
-            console.log("Дочерние объекты:", gltf.scene.children);
 
-        });
-    }
 
     if (runningMode === "IMAGE") {
         runningMode = "VIDEO";
@@ -226,60 +258,33 @@ async function predictWebcam() {
         if (matrixRaw && matrixRaw.every(Number.isFinite)) {
             const matrix = new THREE.Matrix4().fromArray(matrixRaw);
 
-            // ✅ Поворот из матрицы
+            // Извлекаем только поворот и позицию (масштаб игнорируем)
+            const position = new THREE.Vector3();
             const rotation = new THREE.Quaternion();
-            matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
+            matrix.decompose(position, rotation, new THREE.Vector3());
 
-            // ✅ Позиция из landmarks
-            const landmarks = results.faceLandmarks[0];
-            const forehead = landmarks[10];      // точка на лбу
-            const leftEar = landmarks[234];
-            const rightEar = landmarks[454];
+            // === 1. Смещение вверх вдоль локальной оси головы (ось Y в голове)
+            // === Смещение вверх (по Y головы) и назад (по Z головы)
+            const headUp = new THREE.Vector3(0, guiParams.height, 0).applyQuaternion(rotation);
+            const headBack = new THREE.Vector3(0, 0, -guiParams.depth).applyQuaternion(rotation);
+            const finalPosition = position.clone().add(headUp).add(headBack);
 
-            const FACE_SCALE = 1.5;
-            const headVec = new THREE.Vector3(
-                (forehead.x - 0.5) * FACE_SCALE,
-                -(forehead.y - 0.5) * FACE_SCALE,
-                -forehead.z * FACE_SCALE
+            // === 2. Добавляем лёгкий наклон головы вперёд (ось X)
+            const pitchOffset = new THREE.Quaternion().setFromEuler(
+                new THREE.Euler(THREE.MathUtils.degToRad(1), 0, 0)
+            );
+            rotation.multiply(pitchOffset);
+
+            // === 3. Сборка финальной матрицы с масштабом
+            const poseMatrix = new THREE.Matrix4().compose(
+                finalPosition,
+                rotation,
+                new THREE.Vector3(guiParams.scale, guiParams.scale, guiParams.scale)
             );
 
-            // ✅ Смещения вверх и назад по осям головы
-            const rotMatrix = new THREE.Matrix4().makeRotationFromQuaternion(rotation);
-            const yAxis = new THREE.Vector3(0, 1, 0).applyMatrix4(rotMatrix).normalize();
-            const zAxis = new THREE.Vector3(0, 0, 1).applyMatrix4(rotMatrix).normalize();
-
-            const heightOffset = 0;
-            const depthOffset = 0.22;
-            const offset = yAxis.multiplyScalar(heightOffset).add(zAxis.multiplyScalar(-depthOffset));
-
-            const finalPosition = headVec.clone().add(offset);
-
-            // ✅ Масштаб по XZ-расстоянию между ушами
-            const left = new THREE.Vector2(leftEar.x, leftEar.z);
-            const right = new THREE.Vector2(rightEar.x, rightEar.z);
-
-            const MODEL_SCALE = 0.07; // или 0.07, 0.09 — подбирается вручную
-            const scale = new THREE.Vector3(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
-            
-            // const earDist = left.distanceTo(right);
-            // const BASE_WIDTH = 3.4; // подбирается один раз
-            // const MODEL_SCALE = (earDist / BASE_WIDTH) * 1.5;
-            // const scale = new THREE.Vector3(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
-
-            // ✅ Дополнительный лёгкий наклон шляпы вперёд (опционально)
-            const headTiltAngle = THREE.MathUtils.degToRad(5);
-            const tiltQuaternion = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(1, 0, 0), headTiltAngle
-            );
-            rotation.multiply(tiltQuaternion);
-
-            // ✅ Финальная матрица
-            const poseMatrix = new THREE.Matrix4().compose(finalPosition, rotation, scale);
-
-            // Применение
-            if (!hatRef.visible) hatRef.visible = true;
             hatRef.matrixAutoUpdate = false;
             hatRef.matrix.copy(poseMatrix);
+            hatRef.visible = true;
         }
 
     }
