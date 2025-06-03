@@ -140,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM1111";
+        enableWebcamButton.innerText = "ENABLE WEBCAM2222";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -149,7 +149,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE1111";
+    enableWebcamButton.innerText = "DISABLE2222";
 
     const constraints = {
         video: {
@@ -174,18 +174,8 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 async function predictWebcam() {
 
     const aspect = 4 / 3;
-    const videoHeight = video.videoHeight;
+    const videoHeight = video.clientHeight;
     const videoWidth = videoHeight * aspect;
-
-    const dpr = window.devicePixelRatio || 1;
-
-    renderer.setSize(videoWidth, videoHeight, false);
-    renderer.setPixelRatio(dpr); // ← ты это уже делаешь
-
-
-    // const fixedWidth = 640;
-    // const fixedHeight = 480;
-    // const fixedAspect = fixedWidth / fixedHeight;
 
 
     renderer.setSize(videoWidth, videoHeight, false);
@@ -194,23 +184,10 @@ async function predictWebcam() {
         camera.position.set(0, 0, 5);
     }
 
-    const container = document.getElementById("cameraContainer");
-    // container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
-    // video.style.width = videoWidth > container.clientWidth ? container.clientWidth + "px" : videoWidth + "px";
-    // video.style.height = videoHeight + "px";
-    // canvasElement.style.width = videoWidth + "px";
-    // canvasElement.style.height = videoHeight + "px";
-    // canvasElement.width = videoWidth;
-    // canvasElement.height = videoHeight;
-
-     // Правим размеры канваса
-    canvasElement.width = videoWidth * dpr;
-    canvasElement.height = videoHeight * dpr;
     canvasElement.style.width = videoWidth + "px";
     canvasElement.style.height = videoHeight + "px";
-
-    canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
-    canvasCtx.scale(dpr, dpr);
+    canvasElement.width = videoWidth;
+    canvasElement.height = videoHeight;
 
 
     if (runningMode === "IMAGE") {
