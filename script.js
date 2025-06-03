@@ -15,16 +15,16 @@ import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.17/+esm';
 
 
 const guiParams = {
-    height: 3.23,       // вверх по голове (ось Y)
-    depth: 7.27,        // назад по голове (ось Z)
-    scale: 6.32,
+    height: 13.88,       // вверх по голове (ось Y)
+    depth: 8.25,        // назад по голове (ось Z)
+    scale: 1.75,
 };
 
 
 const gui = new GUI();
-gui.add(guiParams, 'height', 0, 10, 0.01).name('HEIGHT_OFFSET');
+gui.add(guiParams, 'height', 5, 20, 0.01).name('HEIGHT_OFFSET');
 gui.add(guiParams, 'depth', 0, 10, 0.01).name('DEPTH_OFFSET');
-gui.add(guiParams, 'scale', 0.1, 20, 0.01).name('MODEL_SCALE');
+gui.add(guiParams, 'scale', 0.1, 10, 0.01).name('MODEL_SCALE');
 
 
 //============================================================================
@@ -140,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM5";
+        enableWebcamButton.innerText = "ENABLE WEBCAM89";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -149,7 +149,7 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE5";
+    enableWebcamButton.innerText = "DISABLE89";
 
     const constraints = {
         video: {
@@ -172,7 +172,7 @@ let results = undefined;
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 async function predictWebcam() {
-    
+
     const aspect = 4 / 3;
     const videoHeight = 640;
     const videoWidth = 480;
@@ -268,11 +268,24 @@ async function predictWebcam() {
             const rotation = new THREE.Quaternion();
             matrix.decompose(position, rotation, new THREE.Vector3());
 
-            // === Размер головы (на экране)
+            const fovRad = camera.fov * Math.PI / 180;
+            const sceneHeightAtZ = 2 * Math.tan(fovRad / 2) * camera.position.z;
+
             const l10 = results.faceLandmarks[0][10];
             const l152 = results.faceLandmarks[0][152];
             const faceHeightND = Math.abs(l10.y - l152.y);
-            const faceScaleFactor = 1 / faceHeightND;
+
+            // теперь нормальный scaleFactor
+            const faceHeightInScene = faceHeightND * sceneHeightAtZ;
+            const faceScaleFactor = 1 / faceHeightInScene;
+
+
+
+            // === Размер головы (на экране)
+            // const l10 = results.faceLandmarks[0][10];
+            // const l152 = results.faceLandmarks[0][152];
+            // const faceHeightND = Math.abs(l10.y - l152.y);
+            // const faceScaleFactor = 1 / faceHeightND;
 
             // === Динамика
             const dynamicScale = guiParams.scale * 1 / faceScaleFactor;
