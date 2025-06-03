@@ -140,7 +140,7 @@ async function enableCam() {
     // Остановка камеры, если уже запущена
     if (webcamRunning) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE WEBCAM082";
+        enableWebcamButton.innerText = "ENABLE WEBCAM115";
         video.srcObject?.getTracks().forEach(track => track.stop());
         return;
     }
@@ -149,12 +149,12 @@ async function enableCam() {
     hatRef = await loadHat();
 
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE082";
+    enableWebcamButton.innerText = "DISABLE115";
 
     const constraints = {
         video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
+            width: { ideal: 960 },
+            height: { ideal: 720 },
             aspectRatio: 4 / 3,
             facingMode: "user",
             resizeMode: "crop-and-scale"
@@ -174,8 +174,8 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 async function predictWebcam() {
     
     const aspect = 4 / 3;
-    const videoHeight = 640;
-    const videoWidth = 480;
+    const videoHeight = video.videoHeight;
+    const videoWidth = videoHeight * aspect;
 
 
     // const fixedWidth = 640;
